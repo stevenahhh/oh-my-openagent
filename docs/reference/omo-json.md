@@ -42,7 +42,7 @@ After the file layers merge, each harness resolves its own view out of the merge
 3. **`profiles.<name>`** for the active profile.
 4. **`profiles.<name>.[harness]`** for the active profile.
 
-Schema defaults apply once at the very end, after all four layers fold. Control keys (`profiles`, `[opencode]`, `[senpi]`, `[codex]`) never leak into the resolved view. Activating a profile that does not exist yields a `profile` diagnostic and the base configuration.
+Schema defaults apply once at the very end, after all four layers fold. Control keys (`profiles`, `active_profile`, `[opencode]`, `[senpi]`, `[codex]`) never leak into the resolved view. Activating a profile that does not exist yields a `profile` diagnostic and the base configuration.
 
 ### Profile activation
 
@@ -51,7 +51,8 @@ The active profile name comes from (`resolveOmoProfileName`), highest priority f
 1. `OMO_PROFILE`
 2. `OCX_PROFILE` (set by `ocx oc -p <name>`)
 3. An `OPENCODE_CONFIG_DIR` whose lexical tail is `profiles/<name>`
-4. None (no profile layer applied)
+4. The persisted `active_profile` key from the merged config layers, written by `omo profile use <name>`
+5. None (no profile layer applied)
 
 No default profiles ship. A profile exists only when you write one under `profiles.<name>` or the migration derives one from a legacy OpenCode profile directory.
 
@@ -104,6 +105,7 @@ No default profiles ship. A profile exists only when you write one under `profil
   "[senpi]": {},        // Senpi-only overrides, typed base keys
   "[codex]": {},        // Codex-only overrides, typed base keys
   "profiles": {},       // record<string, Profile>, opt-in named profiles
+  "active_profile": "", // optional persisted profile activation, written by `omo profile use`
   "_migrations": [],    // applied migration ids, written by the migration engine
   "legacy_migrations": {} // imported legacy migration history, engine-managed
 }
@@ -296,6 +298,10 @@ A record of profile name to a partial view (`schema/config.ts` `OmoConfigProfile
 ```
 
 Profiles are inert until activated (see [Profile activation](#profile-activation)). When active, the profile's base keys fold over the shared base, and the profile's harness block folds over the top-level harness block.
+
+### `active_profile`
+
+An optional profile name that persists an activation without any environment variable. `omo profile use <name>` writes it into the user file `~/.omo/omo.jsonc`; `omo profile clear` removes it. Because it is read from the merged layers, a project `.omo/omo.jsonc` can pin a profile for one repository and wins over the user file, exactly like every other layered key. Every environment activation source outranks it, so `OMO_PROFILE=other opencode` still overrides a persisted selection for that one run. A persisted name that matches no entry under `profiles` yields the same `profile` diagnostic and base-config fallback as any other unknown activation.
 
 ### Model references and model strings
 
